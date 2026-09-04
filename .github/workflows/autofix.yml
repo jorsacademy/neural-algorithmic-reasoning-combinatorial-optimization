@@ -27,36 +27,34 @@ jobs:
           from pathlib import Path
 
           path = Path("src/narcopt/domain.py")
-          text = path.read_text(encoding="utf-8")
-          old_binary = """    for chosen in selection:
-              if isinstance(chosen, bool) or isinstance(chosen, (int, np.integer)) and int(chosen) in {0, 1}:
-                  normalized.append(int(chosen))
-              else:
-                  raise ValueError(\"selection entries must be binary\")
-          """
-          new_binary = """    for chosen in selection:
-              if isinstance(chosen, bool) or (
-                  isinstance(chosen, (int, np.integer)) and int(chosen) in {0, 1}
-              ):
-                  normalized.append(int(chosen))
-              else:
-                  raise ValueError(\"selection entries must be binary\")
-          """
-          old_tie = """        if candidate.objective > best.objective or candidate.objective == best.objective and candidate.selection < best.selection:
-                      best = candidate
-          """
-          new_tie = """        if candidate.objective > best.objective or (
-                      candidate.objective == best.objective
-                      and candidate.selection < best.selection
-                  ):
-                      best = candidate
-          """
-          if old_binary not in text or old_tie not in text:
-              raise RuntimeError("expected Ruff residuals were not found")
-          path.write_text(
-              text.replace(old_binary, new_binary).replace(old_tie, new_tie),
-              encoding="utf-8",
+          lines = path.read_text(encoding="utf-8").splitlines()
+
+          def replace_line(exact: str, replacement: list[str]) -> None:
+              for index, line in enumerate(lines):
+                  if line.strip() == exact:
+                      indent = line[: len(line) - len(line.lstrip())]
+                      lines[index : index + 1] = [indent + value for value in replacement]
+                      return
+              raise RuntimeError(f"expected Ruff residual was not found: {exact}")
+
+          replace_line(
+              "if isinstance(chosen, bool) or isinstance(chosen, (int, np.integer)) and int(chosen) in {0, 1}:",
+              [
+                  "if isinstance(chosen, bool) or (",
+                  "    isinstance(chosen, (int, np.integer)) and int(chosen) in {0, 1}",
+                  "):",
+              ],
           )
+          replace_line(
+              "if candidate.objective > best.objective or candidate.objective == best.objective and candidate.selection < best.selection:",
+              [
+                  "if candidate.objective > best.objective or (",
+                  "    candidate.objective == best.objective",
+                  "    and candidate.selection < best.selection",
+                  "):",
+              ],
+          )
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
           PY
           ruff format .
           ruff check .
