@@ -1,0 +1,38 @@
+name: One-time repository bootstrap
+
+on:
+  push:
+    branches: [trace-supervised-knapsack-search]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: trace-supervised-knapsack-search
+          fetch-depth: 0
+
+      - name: Materialize repository tree
+        run: |
+          cat .bootstrap/payload-* > /tmp/repository.tar.gz.b64
+          echo "05b3e57c1855b1a8e7183b4018b8bda26cd7184ecb916033d94f9de2abe66777  /tmp/repository.tar.gz.b64" | sha256sum --check
+          base64 --decode /tmp/repository.tar.gz.b64 > /tmp/repository.tar.gz
+          echo "3cd061b183ccf329aadc9fd7a5f37c1f6ac272af1b35f1b9de3fada8926d24ca  /tmp/repository.tar.gz" | sha256sum --check
+          tar -xzf /tmp/repository.tar.gz
+          rm -rf .bootstrap
+          python -m compileall -q src scripts
+
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Build trace-supervised neural algorithmic reasoning benchmark"
+          git push origin HEAD:trace-supervised-knapsack-search
