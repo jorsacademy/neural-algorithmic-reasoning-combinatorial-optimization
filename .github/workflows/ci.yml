@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2,<3"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Check formatting
+        run: ruff format --check .
+
+      - name: Type check
+        run: mypy --python-version "${{ matrix.python-version }}" src
+
+      - name: Test with branch coverage
+        run: pytest
+
+      - name: End-to-end NAR exact-search smoke
+        run: |
+          narcopt collect \
+            --count 6 --item-counts 4 5 --seed 100 \
+            --output /tmp/train.jsonl
+          narcopt collect \
+            --count 3 --item-counts 4 5 --seed 200 \
+            --output /tmp/validation.jsonl
+          narcopt train /tmp/train.jsonl \
+            --validation /tmp/validation.jsonl \
+            --model trace_reasoner --epochs 1 \
+            --hidden-dim 8 --hidden-layers 1 --batch-size 32 --seed 300 \
+            --checkpoint /tmp/reasoner.safetensors
+          narcopt train /tmp/train.jsonl \
+            --validation /tmp/validation.jsonl \
+            --model direct_policy --epochs 1 \
+            --hidden-dim 8 --hidden-layers 1 --batch-size 2 --seed 400 \
+            --checkpoint /tmp/policy.safetensors
+          narcopt oracle /tmp/validation.jsonl \
+            --sample-index 0 --output /tmp/oracle.json
+          narcopt benchmark /tmp/validation.jsonl \
+            --reasoner-checkpoint /tmp/reasoner.safetensors \
+            --policy-checkpoint /tmp/policy.safetensors \
+            --bootstrap-draws 10 \
+            --output-json /tmp/benchmark.json \
+            --output-csv /tmp/benchmark.csv
