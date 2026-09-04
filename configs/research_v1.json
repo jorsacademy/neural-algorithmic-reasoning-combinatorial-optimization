@@ -1,0 +1,15 @@
+{
+  "batch_size": 2048,
+  "bootstrap_draws": 300,
+  "evaluation_samples": 20,
+  "hidden_layers": 2,
+  "learning_rate": 0.002,
+  "policy_epochs": 40,
+  "policy_hidden_dim": 64,
+  "reasoner_epochs": 30,
+  "reasoner_hidden_dim": 64,
+  "seed": 2026,
+  "train_item_counts": [8, 10, 12, 14],
+  "train_samples": 80,
+  "validation_samples": 24
+}
