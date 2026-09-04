@@ -362,14 +362,14 @@ def save_report_csv(report: EvaluationReport, path: str | Path) -> None:
     output = Path(path)
     output.parent.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
-    for row in report.approximation_rows:
-        payload = row.to_dict()
-        payload["row_type"] = "approximation"
-        rows.append(payload)
-    for row in report.search_rows:
-        payload = row.to_dict()
-        payload["row_type"] = "search"
-        rows.append(payload)
+    for approximation_row in report.approximation_rows:
+        approximation_payload = approximation_row.to_dict()
+        approximation_payload["row_type"] = "approximation"
+        rows.append(approximation_payload)
+    for search_row in report.search_rows:
+        search_payload = search_row.to_dict()
+        search_payload["row_type"] = "search"
+        rows.append(search_payload)
     trace_payload = report.trace_metrics.to_dict()
     trace_payload["row_type"] = "trace"
     rows.append(trace_payload)

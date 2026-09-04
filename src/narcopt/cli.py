@@ -183,7 +183,7 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
         solution = solve_dynamic_programming(instance)
         if not isinstance(solution, KnapsackSolution):
             raise RuntimeError("unexpected dynamic-programming return type")
-        payload = {
+        generated_payload: dict[str, object] = {
             "instance": instance.to_dict(),
             "exact_solution": solution.to_dict(),
             "audit": audit_solution(
@@ -193,8 +193,8 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
                 verify_optimality=True,
             ).to_dict(),
         }
-        write_json(payload, args.output)
-        return {"output": str(args.output), **payload}
+        write_json(generated_payload, args.output)
+        return {"output": str(args.output), **generated_payload}
 
     if args.command == "collect":
         dataset = collect_dataset(
@@ -221,18 +221,19 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
         brute_force = solve_brute_force(instance, maximum_items=args.maximum_items)
         if not isinstance(dynamic, KnapsackSolution):
             raise RuntimeError("unexpected dynamic-programming return type")
-        payload = {
+        verified = dynamic.objective == brute_force.objective
+        oracle_payload: dict[str, object] = {
             "dataset_fingerprint": dataset.fingerprint,
             "instance_id": instance.instance_id,
             "dynamic_programming": dynamic.to_dict(),
             "brute_force": brute_force.to_dict(),
-            "verified": dynamic.objective == brute_force.objective,
+            "verified": verified,
         }
-        if not payload["verified"]:
+        if not verified:
             raise RuntimeError("dynamic programming disagrees with exhaustive enumeration")
         if args.output is not None:
-            write_json(payload, args.output)
-        return payload
+            write_json(oracle_payload, args.output)
+        return oracle_payload
 
     if args.command == "train":
         dataset = load_dataset(args.dataset)
@@ -242,7 +243,7 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
             model = BellmanReasoner(BellmanReasonerConfig(args.hidden_dim, args.hidden_layers))
         else:
             model = DirectPolicy(DirectPolicyConfig(args.hidden_dim, args.hidden_layers))
-        config = TrainingConfig(
+        training_config = TrainingConfig(
             epochs=args.epochs,
             learning_rate=args.learning_rate,
             batch_size=args.batch_size,
@@ -250,7 +251,7 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
             validation_every=1,
             patience_checks=max(2, args.epochs),
         )
-        summary = train_model(model, dataset, validation, config=config)
+        training_summary = train_model(model, dataset, validation, config=training_config)
         save_checkpoint(
             model,
             args.checkpoint,
@@ -258,18 +259,21 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
                 "training_mode": args.model,
                 "train_fingerprint": dataset.fingerprint,
                 "validation_fingerprint": validation.fingerprint,
-                "training_config": asdict(config),
+                "training_config": asdict(training_config),
             },
         )
-        payload = {"checkpoint": str(args.checkpoint), **summary.to_dict()}
+        training_payload: dict[str, object] = {
+            "checkpoint": str(args.checkpoint),
+            **training_summary.to_dict(),
+        }
         if args.output_report is not None:
-            write_json(payload, args.output_report)
-        return payload
+            write_json(training_payload, args.output_report)
+        return training_payload
 
     if args.command == "benchmark":
         dataset = load_dataset(args.dataset)
         reasoner, policy = _load_models(args.reasoner_checkpoint, args.policy_checkpoint)
-        report = evaluate_models(
+        evaluation_report = evaluate_models(
             reasoner,
             policy,
             dataset,
@@ -277,19 +281,19 @@ def _run(args: argparse.Namespace) -> dict[str, object]:
             bootstrap_seed=args.seed,
             bootstrap_draws=args.bootstrap_draws,
         )
-        save_report_json(report, args.output_json)
+        save_report_json(evaluation_report, args.output_json)
         if args.output_csv is not None:
-            save_report_csv(report, args.output_csv)
-        return report.to_dict()
+            save_report_csv(evaluation_report, args.output_csv)
+        return evaluation_report.to_dict()
 
     if args.command == "research":
-        config = _load_research_config(args.config)
-        _models, report = run_research_experiment(
-            config,
+        research_config = _load_research_config(args.config)
+        _models, research_report = run_research_experiment(
+            research_config,
             checkpoint_directory=args.checkpoint_directory,
         )
-        save_research_report(report, args.output_report)
-        return report.to_dict()
+        save_research_report(research_report, args.output_report)
+        return research_report.to_dict()
 
     raise RuntimeError("unreachable command")
 

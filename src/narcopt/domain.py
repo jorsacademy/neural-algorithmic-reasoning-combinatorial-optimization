@@ -139,11 +139,11 @@ class DynamicProgrammingTrace:
 
     @property
     def item_count(self) -> int:
-        return self.values.shape[0] - 1
+        return int(self.values.shape[0]) - 1
 
     @property
     def capacity(self) -> int:
-        return self.values.shape[1] - 1
+        return int(self.values.shape[1]) - 1
 
 
 def _solution_from_selection(

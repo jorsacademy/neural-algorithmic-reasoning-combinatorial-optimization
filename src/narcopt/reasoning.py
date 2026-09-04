@@ -157,7 +157,7 @@ def rollout_reasoner(model: BellmanReasoner, instance: KnapsackInstance) -> Bell
     logit_rows = [np.full(instance.capacity + 1, -20.0, dtype=np.float64)]
     with torch.no_grad():
         for weight, value in zip(instance.weights, instance.values, strict=True):
-            previous, logits = model.step(
+            previous, step_logits = model.step(
                 previous,
                 item_weight=weight,
                 item_value=value,
@@ -165,14 +165,14 @@ def rollout_reasoner(model: BellmanReasoner, instance: KnapsackInstance) -> Bell
                 value_scale=scale,
             )
             value_rows.append(previous.detach().cpu().double().numpy() * scale)
-            logit_rows.append(logits.detach().cpu().double().numpy())
+            logit_rows.append(step_logits.detach().cpu().double().numpy())
     values = np.stack(value_rows)
-    logits = np.stack(logit_rows)
-    preferred, scores = _solution_from_backtracking(instance, logits)
+    logit_table = np.stack(logit_rows)
+    preferred, scores = _solution_from_backtracking(instance, logit_table)
     candidate = repair_selection(instance, scores, preferred)
     return BellmanRollout(
         values=values,
-        logits=logits,
+        logits=logit_table,
         advice=HeuristicAdvice("trace_reasoner", preferred, scores, candidate),
     )
 

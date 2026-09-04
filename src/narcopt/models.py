@@ -70,7 +70,7 @@ class BellmanReasoner(nn.Module):
     def forward(self, features: Tensor) -> Tensor:
         if features.ndim != 2 or features.shape[1] != 7:
             raise ValueError("Bellman features must have shape [cells, 7]")
-        logits = self.network(features).squeeze(-1)
+        logits = cast(Tensor, self.network(features)).squeeze(-1)
         if not torch.all(torch.isfinite(logits)):
             raise RuntimeError("Bellman reasoner produced non-finite logits")
         return logits
@@ -133,10 +133,13 @@ class DirectPolicy(nn.Module):
             raise ValueError("policy features must have shape [items, 5]")
         if item_features.shape[0] == 0:
             raise ValueError("policy requires at least one item")
-        local = self.encoder(item_features)
+        local = cast(Tensor, self.encoder(item_features))
         mean_pool = torch.mean(local, dim=0, keepdim=True).expand_as(local)
         max_pool = torch.max(local, dim=0, keepdim=True).values.expand_as(local)
-        logits = self.decoder(torch.cat([local, mean_pool, max_pool], dim=1)).squeeze(-1)
+        logits = cast(
+            Tensor,
+            self.decoder(torch.cat([local, mean_pool, max_pool], dim=1)),
+        ).squeeze(-1)
         if not torch.all(torch.isfinite(logits)):
             raise RuntimeError("direct policy produced non-finite logits")
         return logits
@@ -235,6 +238,13 @@ def save_checkpoint(
     save_file(tensors, str(output), metadata=header)
 
 
+def _config_integer(config: dict[str, object], name: str) -> int:
+    value = config.get(name)
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"checkpoint model field {name!r} must be an integer")
+    return value
+
+
 def load_checkpoint(
     path: str | Path,
     *,
@@ -261,15 +271,15 @@ def load_checkpoint(
     if model_type == "bellman_reasoner":
         model: BellmanReasoner | DirectPolicy = BellmanReasoner(
             BellmanReasonerConfig(
-                hidden_dim=int(config["hidden_dim"]),
-                hidden_layers=int(config["hidden_layers"]),
+                hidden_dim=_config_integer(config, "hidden_dim"),
+                hidden_layers=_config_integer(config, "hidden_layers"),
             )
         )
     elif model_type == "direct_policy":
         model = DirectPolicy(
             DirectPolicyConfig(
-                hidden_dim=int(config["hidden_dim"]),
-                hidden_layers=int(config["hidden_layers"]),
+                hidden_dim=_config_integer(config, "hidden_dim"),
+                hidden_layers=_config_integer(config, "hidden_layers"),
             )
         )
     else:

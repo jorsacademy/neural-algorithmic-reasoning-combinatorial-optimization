@@ -127,20 +127,17 @@ def _train_models(
         BellmanReasonerConfig(config.reasoner_hidden_dim, config.hidden_layers)
     )
     policy = DirectPolicy(DirectPolicyConfig(config.policy_hidden_dim, config.hidden_layers))
-    common = {
-        "learning_rate": config.learning_rate,
-        "batch_size": config.batch_size,
-        "validation_every": 2,
-        "patience_checks": 8,
-    }
     reasoner_summary = train_trace_reasoner(
         reasoner,
         training,
         validation,
         config=TrainingConfig(
             epochs=config.reasoner_epochs,
+            learning_rate=config.learning_rate,
+            batch_size=config.batch_size,
+            validation_every=2,
+            patience_checks=8,
             seed=config.seed + 10_000,
-            **common,
         ),
     )
     policy_summary = train_direct_policy(
@@ -149,8 +146,11 @@ def _train_models(
         validation,
         config=TrainingConfig(
             epochs=config.policy_epochs,
+            learning_rate=config.learning_rate,
+            batch_size=config.batch_size,
+            validation_every=2,
+            patience_checks=8,
             seed=config.seed + 20_000,
-            **common,
         ),
     )
     return reasoner, policy, reasoner_summary, policy_summary

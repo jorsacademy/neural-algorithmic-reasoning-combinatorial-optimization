@@ -184,7 +184,7 @@ def train_trace_reasoner(
             if not torch.isfinite(loss):
                 raise RuntimeError("trace training produced a non-finite loss")
             optimizer.zero_grad(set_to_none=True)
-            loss.backward()
+            loss.backward()  # type: ignore[no-untyped-call]
             last_gradient_norm = _gradient_norm(model)
             if not math.isfinite(last_gradient_norm):
                 raise RuntimeError("trace training produced non-finite gradients")
@@ -282,7 +282,7 @@ def train_direct_policy(
             loss = F.binary_cross_entropy_with_logits(logits, target, weight=item_weights)
             if not torch.isfinite(loss):
                 raise RuntimeError("policy training produced a non-finite loss")
-            (loss / config.batch_size).backward()
+            (loss / config.batch_size).backward()  # type: ignore[no-untyped-call]
             pending += 1
             losses.append(float(loss.detach().cpu()))
             if pending == config.batch_size or position == len(order):
