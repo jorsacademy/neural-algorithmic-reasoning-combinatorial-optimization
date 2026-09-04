@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "Neural Algorithmic Reasoning for Combinatorial Optimization"
+type: software
+authors:
+  - name: jorsacademy
+version: 0.1.0
+date-released: 2026-09-04
+url: "https://github.com/jorsacademy/neural-algorithmic-reasoning-combinatorial-optimization"
+license: "PolyForm-Noncommercial-1.0.0"
+abstract: >-
+  A verification-first benchmark comparing Bellman-trace supervision and
+  terminal-only neural policies as approximate solvers and non-binding guidance
+  for exact branch-and-bound on controlled 0-1 knapsack distributions.
