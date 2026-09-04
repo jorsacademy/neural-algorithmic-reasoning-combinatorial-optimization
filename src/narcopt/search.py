@@ -120,9 +120,7 @@ def exact_branch_and_bound(
     initial_objective = incumbent.objective
     order = _branch_order(instance, advice)
     preferred = incumbent.selection
-    stack: list[tuple[int, int, int, tuple[int, ...]]] = [
-        (0, 0, 0, (0,) * instance.item_count)
-    ]
+    stack: list[tuple[int, int, int, tuple[int, ...]]] = [(0, 0, 0, (0,) * instance.item_count)]
     nodes = 0
     pruned = 0
     updates = 0

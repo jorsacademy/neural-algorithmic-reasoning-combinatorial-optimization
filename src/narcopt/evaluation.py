@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import csv
-import math
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from statistics import median

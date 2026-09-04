@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import itertools
 import math
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
-from typing import Sequence
 
 import numpy as np
 
@@ -153,19 +153,17 @@ def _solution_from_selection(
         raise ValueError("selection length does not match item count")
     normalized: list[int] = []
     for chosen in selection:
-        if isinstance(chosen, bool):
-            normalized.append(int(chosen))
-        elif isinstance(chosen, (int, np.integer)) and int(chosen) in {0, 1}:
+        if isinstance(chosen, bool) or (
+            isinstance(chosen, (int, np.integer)) and int(chosen) in {0, 1}
+        ):
             normalized.append(int(chosen))
         else:
             raise ValueError("selection entries must be binary")
     total_weight = sum(
-        weight * chosen
-        for weight, chosen in zip(instance.weights, normalized, strict=True)
+        weight * chosen for weight, chosen in zip(instance.weights, normalized, strict=True)
     )
     objective = sum(
-        value * chosen
-        for value, chosen in zip(instance.values, normalized, strict=True)
+        value * chosen for value, chosen in zip(instance.values, normalized, strict=True)
     )
     return KnapsackSolution(tuple(normalized), objective, total_weight)
 
@@ -220,9 +218,9 @@ def solve_brute_force(
         candidate = _solution_from_selection(instance, selection)
         if candidate.total_weight > instance.capacity:
             continue
-        if candidate.objective > best.objective:
-            best = candidate
-        elif candidate.objective == best.objective and candidate.selection < best.selection:
+        if candidate.objective > best.objective or (
+            candidate.objective == best.objective and candidate.selection < best.selection
+        ):
             best = candidate
     return best
 
